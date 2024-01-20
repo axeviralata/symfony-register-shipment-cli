@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  app:
+    build: './docker/'
+    container_name: php-shipping-app
+    environment:
+      PHP_IDE_CONFIG: "serverName=php-shipping" # set same server name in the PHP IDE settings (PHP->Servers)
+    volumes:
+      - './:/var/www/'
+      - './docker/custom.ini:/usr/local/etc/php/conf.d/docker-php-additional-config.ini'

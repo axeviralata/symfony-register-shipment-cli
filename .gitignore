@@ -1,0 +1,10 @@
+/vendor/
+.env
+.idea/
+.DS_Store
+bin/.phpunit
+###> phpunit/phpunit ###
+/phpunit.xml
+.phpunit.result.cache
+var/
+###< phpunit/phpunit ###
