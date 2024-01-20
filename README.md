@@ -1,10 +1,3 @@
-# PHP Developer Exercise for Boozt
-
-## Prerequisites
-Here at Boozt we ship hundreds of packages per one month to Scandinavia and other parts of Europe. In order to provide the best service for our customers we are constantly expanding the pallet of Shipping Providers (currently there are more than 10). That is why is very important to have simple and reliable way to add more shipping providers.
-
-Exercise provides a basic framework with Order entity and service, so you could spend less time bootstrapping the project, however feel free to taylor it according to your needs
-
 ### Requirements
 - We expect this to be Unit tested. It is not a requirement to have 100% coverage, but basic functionality should be tested.
 - APIs should be mocked, returning hard-coded results.
