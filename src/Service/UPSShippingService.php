@@ -1,32 +1,30 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\OrderShipment;
-use Exception;
-use Symfony\Component\HttpFoundation\Response;
+use App\Contracts\MockedShippingServiceInterface;
+use App\Contracts\OrderShipmentDTOInterface;
+use App\Contracts\ShippingServiceInterface;
+use App\DTO\UPSOrderShipment;
+use App\Enums\ShippingProvider;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
-class UPSShippingService implements ShippingServiceInterface
+class UPSShippingService implements ShippingServiceInterface, MockedShippingServiceInterface
 {
     const API_URL = 'https://upsfake.com/';
 
-    public function __construct(private readonly HttpClientInterface $client)
+    public function __construct(private HttpClientInterface $client, private SerializerInterface $serializer)
     {
     }
 
-    public function register(OrderShipment $shipment): \Symfony\Contracts\HttpClient\ResponseInterface
+    public function register(OrderShipmentDTOInterface $shipment): ResponseInterface
     {
-        // TODO: add validation of data
-
-        // TODO: map the data from input
-        $requestJson = json_encode([[
-            'order_id' => $shipment->orderId,
-            'country' => 'LT',
-            'street' => 'abc',
-            'city' => 'Vilnius',
-            'post_code' => 77777
-        ]], JSON_THROW_ON_ERROR);
+        $requestJsonData = $this->serializer->serialize($shipment, 'json');
         $response = $this->client->request(
             'POST',
             self::API_URL . 'register', [
@@ -34,14 +32,34 @@ class UPSShippingService implements ShippingServiceInterface
                 'Content-Type: application/json',
                 'Accept: application/json',
             ],
-            'body' => $requestJson,
+            'body' => $requestJsonData,
         ]);
 
         return $response;
     }
 
-    public function getName()
+    public function getName(): string
     {
-        return 'ups';
+        return ShippingProvider::Ups->value;
+    }
+
+    public function supportsProvider(string $provider): bool
+    {
+        return $provider === $this->getName();
+    }
+
+    public function getDTOClass(): string
+    {
+        return UPSOrderShipment::class;
+    }
+
+    public function initMockedClient(): MockHttpClient
+    {
+        $this->client = new MockHttpClient();
+        $this->client->setResponseFactory([
+            new MockResponse('{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "ups"}}}', ['http_code' => 200])
+        ]);
+
+        return $this->client;
     }
 }

@@ -1,29 +1,27 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\OrderShipment;
-use Exception;
-use Symfony\Component\HttpFoundation\Response;
+use App\Contracts\MockedShippingServiceInterface;
+use App\Contracts\OrderShipmentDTOInterface;
+use App\Contracts\ShippingServiceInterface;
+use App\DTO\OMNIVAOrderShipment;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
-class OMNIVAShippingService implements ShippingServiceInterface
+class OMNIVAShippingService implements ShippingServiceInterface, MockedShippingServiceInterface
 {
     const API_URL = 'https://omnivafake.com';
 
-    public function __construct(private readonly HttpClientInterface $client)
+    public function __construct(private HttpClientInterface $client)
     {
     }
 
-    public function register(OrderShipment $shipment): \Symfony\Contracts\HttpClient\ResponseInterface
+    public function register(OrderShipmentDTOInterface $shipment): ResponseInterface
     {
-        // TODO: add validation of data if needed
-
-        //1
-        $requestJson1 = json_encode([[
-            'country' => 'LT',
-            'post_code' => 77777
-        ]], JSON_THROW_ON_ERROR);
         $response = $this->client->request(
             'POST',
             self::API_URL . '/pickup/find', [
@@ -31,19 +29,16 @@ class OMNIVAShippingService implements ShippingServiceInterface
                 'Content-Type: application/json',
                 'Accept: application/json',
             ],
-            'body' => $requestJson1,
+            'body' => json_encode([[
+                'country' => $shipment->getCountry(),
+                'post_code' => $shipment->getPostCode()
+            ]]),
         ]);
 
         if (!in_array($response->getStatusCode(), ['200', '201'])) {
             return $response;
         }
-        //2
-
         $pickupData = json_decode($response->getContent());
-        $requestJson2 = json_encode([[
-            'pickup_point_id' => $pickupData->data->attributes->pickup_point_id,
-            'order_id' => $shipment->orderId,
-        ]], JSON_THROW_ON_ERROR);
         $response = $this->client->request(
             'POST',
             self::API_URL . '/register', [
@@ -51,15 +46,38 @@ class OMNIVAShippingService implements ShippingServiceInterface
                 'Content-Type: application/json',
                 'Accept: application/json',
             ],
-            'body' => $requestJson2,
+            'body' => json_encode([[
+                'pickup_point_id' => $pickupData->data->attributes->pickup_point_id,
+                'order_id' => $shipment->getOrderId(),
+            ]]),
         ]);
 
         return $response;
-        // TODO: Implement register() method.
     }
 
-    public function getName()
+    public function getName(): string
     {
         return 'omniva';
+    }
+
+    public function supportsProvider(string $provider): bool
+    {
+        return $provider === 'omniva';
+    }
+
+    public function getDTOClass(): string
+    {
+        return OMNIVAOrderShipment::class;
+    }
+
+    public function initMockedClient(): MockHttpClient
+    {
+        $this->client = new MockHttpClient();
+        $this->client->setResponseFactory([
+            new MockResponse('{"data":{"type":"pickup_point","attributes":{"pickup_point_id": 11111}}}', ['http_code' => 200]),
+            new MockResponse('{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "omniva"}}}', ['http_code' => 200])
+        ]);
+
+        return $this->client;
     }
 }

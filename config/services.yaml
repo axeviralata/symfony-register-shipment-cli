@@ -29,10 +29,11 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
-   # App\Service\Shipping: '@monolog.logger'
-     #   arguments:
-      #       $logger: '@App\Util\UppercaseTransformer'
-       # tags: [ 'monolog.logger' ]
 
-    #App\Command\ShippingParcelRegisterCommand:
-     #   arguments: ['']
+    _instanceof:
+        App\Contracts\ShippingServiceInterface:
+            tags: [ 'app.shipping_service' ]
+
+    App\Factory\ShippingServiceFactory:
+        arguments:
+            $shippingServices: !tagged_iterator app.shipping_service

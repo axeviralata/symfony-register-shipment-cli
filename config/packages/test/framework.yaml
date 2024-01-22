@@ -1,4 +1,8 @@
 framework:
     test: true
     session:
-        storage_id: session.storage.mock_file
+        handler_id: session.storage.mock_file
+
+services:
+    session.storage.mock_file:
+        class: Symfony\Component\HttpFoundation\Session\Storage\MockFileSessionStorage
