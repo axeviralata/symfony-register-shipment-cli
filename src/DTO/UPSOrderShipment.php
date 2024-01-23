@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\DTO;
 
@@ -14,19 +15,19 @@ class UPSOrderShipment implements OrderShipmentDTOInterface
 
     #[Assert\NotBlank]
     #[Assert\Type('string')]
-    private ?string $country;
+    private ?string $country = null;
 
     #[Assert\NotBlank]
     #[Assert\Type('string')]
-    private ?string $street;
+    private ?string $street = null;
 
     #[Assert\NotBlank]
     #[Assert\Type('string')]
-    private ?string $city;
+    private ?string $city = null;
 
     #[Assert\NotBlank]
     #[Assert\Type('integer')]
-    private ?int $post_code;
+    private ?int $post_code = null;
 
     /**
      * @return int|null

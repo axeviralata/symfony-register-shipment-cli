@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Validator;
@@ -32,7 +33,10 @@ class CommandShipmentRegistrationValidator implements CLIInputValidatorInterface
         ]);
 
         $orderDataViolations = $this->validator->validate($input->getOption('order'), [new Json()]);
-        $result = array_merge($this->buildResponseArray($providerViolations), $this->buildResponseArray($orderDataViolations));
+        $result = array_merge(
+            $this->buildResponseArray($providerViolations),
+            $this->buildResponseArray($orderDataViolations)
+        );
 
         return $result;
     }

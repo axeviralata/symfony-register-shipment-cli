@@ -1,44 +1,60 @@
 <?php
+
 declare(strict_types=1);
 
 
 namespace App\Tests\Unit\Service;
 
-use App\Contracts\OrderShipmentDTOInterface;
+use App\DTO\DHLOrderShipment;
+use App\DTO\UPSOrderShipment;
 use App\Enums\ShippingProvider;
 use App\Service\DHLShippingService;
+use App\Tests\Helpers\SerializerHelper;
 use ArgumentCountError;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-class DHLShippingServiceTest extends KernelTestCase
+class DHLShippingServiceTest extends TestCase
 {
     private DHLShippingService $service;
+    private MockHttpClient $client;
 
     public function setUP(): void
     {
-        self::bootKernel();
-
-        $container = static::getContainer();
-        $this->service = $container->get(DHLShippingService::class);
-        $this->service->initMockedClient();
+        $this->client = new MockHttpClient();
+        $this->client->setResponseFactory([
+            new MockResponse(
+                '{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "dhl"}}}',
+                ['http_code' => Response::HTTP_OK]
+            ),
+        ]);
+        $serializer = $this->createMock(SerializerHelper::class);
+        $serializer->method('serialize')
+            ->willReturn('{"iam":"json"}');
+        $this->service = new DHLShippingService($this->client, $serializer);
     }
 
     /**
      * @test
      */
-    public function getNameDhlProviderProperValue()
+    public function getNameDhlProviderProperValue(): void
     {
         $providerName = $this->service->getName();
         $this->assertIsString($providerName, 'Name is not a string');
-        $this->assertEquals(ShippingProvider::Dhl->value, $providerName, $providerName . ' is not a equal to ' . ShippingProvider::Ups->value);
+        $this->assertEquals(
+            ShippingProvider::Dhl->value,
+            $providerName,
+            $providerName . ' is not a equal to ' . ShippingProvider::Ups->value
+        );
     }
 
     /**
      * @test
      */
-    public function supportsProviderDhlCheck()
+    public function supportsProviderDhlCheck(): void
     {
         $provider = 'dhl';
         $supportsCheck = $this->service->supportsProvider($provider);
@@ -50,23 +66,26 @@ class DHLShippingServiceTest extends KernelTestCase
 
         $this->expectException(ArgumentCountError::class);
         $this->service->supportsProvider();
-
     }
 
     /**
      * @test
      */
-    public function getDtoClassProvidesProperValue()
+    public function getDtoClassProvidesProperValue(): void
     {
         $dhlDtoClassName = 'App\DTO\DHLOrderShipment';
         $currentDTOName = $this->service->getDTOClass();
-        $this->assertEquals($dhlDtoClassName, $currentDTOName, $dhlDtoClassName . ' is not a equal to ' . $currentDTOName);
+        $this->assertEquals(
+            $dhlDtoClassName,
+            $currentDTOName,
+            $dhlDtoClassName . ' is not a equal to ' . $currentDTOName
+        );
     }
 
     /**
      * @test
      */
-    public function initMockedClientInstanceCheck()
+    public function initMockedClientInstanceCheck(): void
     {
         $mockedHttpClient = $this->service->initMockedClient();
         $this->assertInstanceOf(MockHttpClient::class, $mockedHttpClient, 'Http client is not a MockHttpClient');
@@ -75,24 +94,26 @@ class DHLShippingServiceTest extends KernelTestCase
     /**
      * @test
      */
-    public function registerHttpRequestCheck()
+    public function registerDhlHttpRequestCheck(): void
     {
-        $dto = new class() implements OrderShipmentDTOInterface {
-            private string $data = 'test';
-            private int $id = 1;
+        $dto = new DHLOrderShipment();
+        $dto->setCountry('country');
+        $dto->setAddress('address');
+        $dto->setOrderId(1);
+        $dto->setTown('Vilnius');
+        $dto->setZipCode(7777);
 
-            /**
-             * @return mixed
-             */
-            public function jsonSerialize(): mixed
-            {
-                return get_object_vars($this);
-            }
-        };
 
         $response = $this->service->register($dto);
-        $this->assertInstanceOf(ResponseInterface::class, $response, 'Returned value is not related to ResponseInterface');
+        $this->assertInstanceOf(
+            ResponseInterface::class,
+            $response,
+            'Returned value is not related to ResponseInterface'
+        );
 
+        $wrongDto = new UPSOrderShipment();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->service->register($wrongDto);
     }
 
 }

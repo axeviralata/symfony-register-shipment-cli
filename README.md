@@ -1,3 +1,4 @@
+## Test task
 ### Requirements
 - We expect this to be Unit tested. It is not a requirement to have 100% coverage, but basic functionality should be tested.
 - APIs should be mocked, returning hard-coded results.
@@ -32,3 +33,19 @@ In the root directory:
 2. Run `docker exec -it php-shipping-app composer install`
 3. Run `docker exec -it php-shipping-app vendor/bin/phpunit tests`
 
+# Solution
+
+A new command was implemented : `app:order:shipment:register`. 
+Supports 2 required options:
+1. `-p, --shipping-provider=` for shipping provider non-case sensetive value.
+Added validation for supported shipping provider.
+2. `-o, --order=` Order information in json format `'{"iam":"json"}'`.
+Added validation for json type. Json fields values validated based on a shipping provider.
+
+Result of command execution :
+1. Everything is good and process was finished:  Green message **[OK] Shipment has been registered successfully**
+
+2. Validation violations / Exceptions : Red message with some text.
+
+Example of positive flow usage :
+`bin/console app:order:shipment:register -o '{"order_id": 11123234,"country":"LT","address":"addresstest","town":"Vilnius","zip_code":77777}' -p Dhl`

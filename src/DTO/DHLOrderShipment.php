@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\DTO;
 
@@ -9,16 +10,24 @@ use Symfony\Component\Validator\Constraints as Assert;
 class DHLOrderShipment implements OrderShipmentDTOInterface
 {
     #[Assert\NotBlank]
+    #[Assert\Type('integer')]
     private ?int $order_id = 1;
 
     #[Assert\NotBlank]
-    private ?string $country;
+    #[Assert\Type('string')]
+    private ?string $country = null;
+
     #[Assert\NotBlank]
-    private ?string $address;
+    #[Assert\Type('string')]
+    private ?string $address = null;
+
     #[Assert\NotBlank]
-    private ?string $town;
+    #[Assert\Type('string')]
+    private ?string $town = null;
+
     #[Assert\NotBlank]
-    private ?int $zip_code;
+    #[Assert\Type('integer')]
+    private ?int $zip_code = null;
 
     /**
      * @return int|null

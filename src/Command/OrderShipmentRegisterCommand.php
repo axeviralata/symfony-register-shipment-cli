@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Command;
@@ -21,23 +22,39 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class OrderShipmentRegisterCommand extends Command
 {
     public function __construct(
-        private readonly Shipment                   $shipmentService,
-        private readonly ShippingServiceFactory     $shippingServiceFactory,
+        private readonly Shipment $shipmentService,
+        private readonly ShippingServiceFactory $shippingServiceFactory,
         private readonly CLIInputValidatorInterface $cliValidator,
-        string                                      $name = null)
-    {
+        string $name = null
+    ) {
         parent::__construct($name);
     }
 
     protected function configure(): void
     {
         $this
-            ->addUsage('app:order:shipment:register -o \'{"order_id": 11123234,"country":"LT","address":"addresstest","town":"Vilnius","zip_code":77777}\' -p Dhl')
-            ->addOption('shipping-provider', 'p', InputOption::VALUE_REQUIRED,
-                'Insert Shipping provider. Allowed shipment providers are : ' . implode(',', ShippingProvider::getAllValues()), 'none')
-            ->addOption('order', 'o', InputOption::VALUE_REQUIRED,
-                'Insert Order json data in single quotes with proper fields.')
-            ->setHelp('This command allows you to register a parcel(shipment) related to the provided Order.Allowed providers can be found under the proper field description.Example in a Usage');
+            ->addUsage(
+                'app:order:shipment:register -o \'{"order_id": 11123234,"country":"LT","address":"addresstest","town":"Vilnius","zip_code":77777}\' -p Dhl'
+            )
+            ->addOption(
+                'shipping-provider',
+                'p',
+                InputOption::VALUE_REQUIRED,
+                'Insert Shipping provider. Allowed shipment providers are : ' . implode(
+                    ',',
+                    ShippingProvider::getAllValues()
+                ),
+                'none'
+            )
+            ->addOption(
+                'order',
+                'o',
+                InputOption::VALUE_REQUIRED,
+                'Insert Order json data in single quotes with proper fields.'
+            )
+            ->setHelp(
+                'This command allows you to register a parcel(shipment) related to the provided Order.Allowed providers can be found under the proper field description.Example in a Usage'
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

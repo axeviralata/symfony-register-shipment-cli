@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Service;
@@ -8,8 +9,10 @@ use App\Contracts\OrderShipmentDTOInterface;
 use App\Contracts\ShippingServiceInterface;
 use App\DTO\UPSOrderShipment;
 use App\Enums\ShippingProvider;
+use InvalidArgumentException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -22,18 +25,25 @@ class UPSShippingService implements ShippingServiceInterface, MockedShippingServ
     {
     }
 
+
     public function register(OrderShipmentDTOInterface $shipment): ResponseInterface
     {
+        if (!$shipment instanceof UPSOrderShipment) {
+            throw new InvalidArgumentException($shipment::class . ' not an instance of a UPSOrderShipment.');
+        }
         $requestJsonData = $this->serializer->serialize($shipment, 'json');
+
         $response = $this->client->request(
             'POST',
-            self::API_URL . 'register', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ],
-            'body' => $requestJsonData,
-        ]);
+            self::API_URL . 'register',
+            [
+                'headers' => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ],
+                'body' => $requestJsonData,
+            ]
+        );
 
         return $response;
     }
@@ -45,7 +55,7 @@ class UPSShippingService implements ShippingServiceInterface, MockedShippingServ
 
     public function supportsProvider(string $provider): bool
     {
-        return $provider === $this->getName();
+        return $this->getName() === $provider;
     }
 
     public function getDTOClass(): string
@@ -57,7 +67,10 @@ class UPSShippingService implements ShippingServiceInterface, MockedShippingServ
     {
         $this->client = new MockHttpClient();
         $this->client->setResponseFactory([
-            new MockResponse('{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "ups"}}}', ['http_code' => 200])
+            new MockResponse(
+                '{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "ups"}}}',
+                ['http_code' => Response::HTTP_OK]
+            )
         ]);
 
         return $this->client;

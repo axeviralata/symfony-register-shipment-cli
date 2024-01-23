@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Factory;
@@ -22,7 +23,7 @@ class ShippingServiceFactory
     public function create(string $provider): ?ShippingServiceInterface
     {
         foreach ($this->shippingServices as $shippingService) {
-            if ($shippingService instanceof ShippingServiceInterface && $shippingService->supportsProvider($provider)) {
+            if ($shippingService->supportsProvider($provider)) {
                 return $shippingService;
             }
         }

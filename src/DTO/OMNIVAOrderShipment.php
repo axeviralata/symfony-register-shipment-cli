@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DTO;
 
 use App\Contracts\OrderShipmentDTOInterface;
@@ -9,14 +11,16 @@ use Symfony\Component\Validator\Constraints as Assert;
 class OMNIVAOrderShipment implements OrderShipmentDTOInterface
 {
     #[Assert\NotBlank]
+    #[Assert\Type('integer')]
     private ?int $order_id = 1;
 
     #[Assert\NotBlank]
-    private ?string $country;
+    #[Assert\Type('string')]
+    private ?string $country = null;
 
     #[Assert\NotBlank]
     #[Assert\Type('integer')]
-    private ?int $post_code;
+    private ?int $post_code = null;
 
     /**
      * @return int|null

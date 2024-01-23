@@ -7,11 +7,11 @@ namespace App\Entity;
 class Order
 {
     public function __construct(
-        public int $id,
-        public string $street,
-        public string $postCode,
-        public string $city,
-        public string $country,
+        private int $id,
+        private string $street,
+        private string $postCode,
+        private string $city,
+        private string $country,
     ) {
     }
 

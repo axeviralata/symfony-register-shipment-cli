@@ -1,45 +1,60 @@
 <?php
+
 declare(strict_types=1);
 
 
 namespace App\Tests\Unit\Service;
 
-use App\Contracts\OrderShipmentDTOInterface;
+use App\DTO\OMNIVAOrderShipment;
+use App\DTO\UPSOrderShipment;
 use App\Enums\ShippingProvider;
 use App\Service\OMNIVAShippingService;
 use ArgumentCountError;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-class OMNIVAShippingServiceTest extends KernelTestCase
+class OMNIVAShippingServiceTest extends TestCase
 {
     private OMNIVAShippingService $service;
+    private MockHttpClient $client;
 
     public function setUP(): void
     {
-        self::bootKernel();
-
-        $container = static::getContainer();
-        $this->service = $container->get(OMNIVAShippingService::class);
-        $this->service->initMockedClient();
-
+        $this->client = new MockHttpClient();
+        $this->client->setResponseFactory([
+            new MockResponse(
+                '{"data":{"type":"pickup_point","attributes":{"pickup_point_id": 11111}}}',
+                ['http_code' => Response::HTTP_OK]
+            ),
+            new MockResponse(
+                '{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "omniva"}}}',
+                ['http_code' => Response::HTTP_OK]
+            )
+        ]);
+        $this->service = new OMNIVAShippingService($this->client);
     }
 
     /**
      * @test
      */
-    public function getNameUpsProviderProperValue()
+    public function getNameUpsProviderProperValue(): void
     {
         $providerName = $this->service->getName();
         $this->assertIsString($providerName, 'Name is not a string');
-        $this->assertEquals(ShippingProvider::Omniva->value, $providerName, $providerName . ' is not a equal to ' . ShippingProvider::Ups->value);
+        $this->assertEquals(
+            ShippingProvider::Omniva->value,
+            $providerName,
+            $providerName . ' is not a equal to ' . ShippingProvider::Ups->value
+        );
     }
 
     /**
      * @test
      */
-    public function supportsProviderUpsCheck()
+    public function supportsProviderUpsCheck(): void
     {
         $provider = 'omniva';
         $supportsCheck = $this->service->supportsProvider($provider);
@@ -51,23 +66,26 @@ class OMNIVAShippingServiceTest extends KernelTestCase
 
         $this->expectException(ArgumentCountError::class);
         $this->service->supportsProvider();
-
     }
 
     /**
      * @test
      */
-    public function getDtoClassProvidesProperValue()
+    public function getDtoClassProvidesProperValue(): void
     {
         $omnivaDtoClassName = 'App\DTO\OMNIVAOrderShipment';
         $currentDTOName = $this->service->getDTOClass();
-        $this->assertEquals($omnivaDtoClassName, $currentDTOName, $omnivaDtoClassName . ' is not a equal to ' . $currentDTOName);
+        $this->assertEquals(
+            $omnivaDtoClassName,
+            $currentDTOName,
+            $omnivaDtoClassName . ' is not a equal to ' . $currentDTOName
+        );
     }
 
     /**
      * @test
      */
-    public function initMockedClientInstanceCheck()
+    public function initMockedClientInstanceCheck(): void
     {
         $mockedHttpClient = $this->service->initMockedClient();
         $this->assertInstanceOf(MockHttpClient::class, $mockedHttpClient, 'Http client is not a MockHttpClient');
@@ -76,40 +94,42 @@ class OMNIVAShippingServiceTest extends KernelTestCase
     /**
      * @test
      */
-    public function registerHttpRequestCheck()
+    public function registerOmnivaHttpRequestCheck(): void
     {
-        $dtoStub = new class() implements OrderShipmentDTOInterface {
-            private string $order_id = 'test';
-            private string $country = 'LT';
-            private int $post_code = 77777;
+        $dto = new OMNIVAOrderShipment();
+        $dto->setCountry('country');
+        $dto->setPostCode(77777);
+        $dto->setOrderId(1);
 
-            public function getCountry()
-            {
-                return $this->country;
-            }
+        $response = $this->service->register($dto);
+        $this->assertInstanceOf(
+            ResponseInterface::class,
+            $response,
+            'Returned value is not related to ResponseInterface'
+        );
+        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
 
-            public function getPostCode()
-            {
-                return $this->post_code;
-            }
+        $this->client->setResponseFactory([
+            new MockResponse(
+                '{"data":{"type":"error","attributes":{"message": "BAD REQUEST"}}}',
+                ['http_code' => Response::HTTP_BAD_REQUEST]
+            ),
+            new MockResponse(
+                '{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "omniva"}}}',
+                ['http_code' => Response::HTTP_OK]
+            )
+        ]);
+        $response = $this->service->register($dto);
+        $this->assertInstanceOf(
+            ResponseInterface::class,
+            $response,
+            'Returned value is not related to ResponseInterface'
+        );
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
 
-            public function getOrderId()
-            {
-                return $this->order_id;
-            }
-
-            /**
-             * @return mixed
-             */
-            public function jsonSerialize(): mixed
-            {
-                return get_object_vars($this);
-            }
-        };
-
-        $response = $this->service->register($dtoStub);
-        $this->assertInstanceOf(ResponseInterface::class, $response, 'Returned value is not related to ResponseInterface');
-
+        $wrongDto = new UPSOrderShipment();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->service->register($wrongDto);
     }
 
 }

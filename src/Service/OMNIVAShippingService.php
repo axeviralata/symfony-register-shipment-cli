@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Service;
@@ -7,8 +8,11 @@ use App\Contracts\MockedShippingServiceInterface;
 use App\Contracts\OrderShipmentDTOInterface;
 use App\Contracts\ShippingServiceInterface;
 use App\DTO\OMNIVAOrderShipment;
+use App\Enums\ShippingProvider;
+use InvalidArgumentException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -22,47 +26,57 @@ class OMNIVAShippingService implements ShippingServiceInterface, MockedShippingS
 
     public function register(OrderShipmentDTOInterface $shipment): ResponseInterface
     {
+        if (!$shipment instanceof OMNIVAOrderShipment) {
+            throw new InvalidArgumentException($shipment::class . ' not an instance of a OMNIVAOrderShipment.');
+        }
         $response = $this->client->request(
             'POST',
-            self::API_URL . '/pickup/find', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ],
-            'body' => json_encode([[
-                'country' => $shipment->getCountry(),
-                'post_code' => $shipment->getPostCode()
-            ]]),
-        ]);
-
-        if (!in_array($response->getStatusCode(), ['200', '201'])) {
+            self::API_URL . '/pickup/find',
+            [
+                'headers' => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ],
+                'body' => json_encode([
+                    [
+                        'country' => $shipment->getCountry(),
+                        'post_code' => $shipment->getPostCode()
+                    ]
+                ]),
+            ]
+        );
+        if ($response->getStatusCode() < Response::HTTP_OK || $response->getStatusCode() > Response::HTTP_IM_USED) {
             return $response;
         }
         $pickupData = json_decode($response->getContent());
         $response = $this->client->request(
             'POST',
-            self::API_URL . '/register', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ],
-            'body' => json_encode([[
-                'pickup_point_id' => $pickupData->data->attributes->pickup_point_id,
-                'order_id' => $shipment->getOrderId(),
-            ]]),
-        ]);
+            self::API_URL . '/register',
+            [
+                'headers' => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ],
+                'body' => json_encode([
+                    [
+                        'pickup_point_id' => $pickupData->data->attributes->pickup_point_id,
+                        'order_id' => $shipment->getOrderId(),
+                    ]
+                ]),
+            ]
+        );
 
         return $response;
     }
 
     public function getName(): string
     {
-        return 'omniva';
+        return ShippingProvider::Omniva->value;
     }
 
     public function supportsProvider(string $provider): bool
     {
-        return $provider === 'omniva';
+        return $this->getName() === $provider;
     }
 
     public function getDTOClass(): string
@@ -74,8 +88,14 @@ class OMNIVAShippingService implements ShippingServiceInterface, MockedShippingS
     {
         $this->client = new MockHttpClient();
         $this->client->setResponseFactory([
-            new MockResponse('{"data":{"type":"pickup_point","attributes":{"pickup_point_id": 11111}}}', ['http_code' => 200]),
-            new MockResponse('{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "omniva"}}}', ['http_code' => 200])
+            new MockResponse(
+                '{"data":{"type":"pickup_point","attributes":{"pickup_point_id": 11111}}}',
+                ['http_code' => Response::HTTP_OK]
+            ),
+            new MockResponse(
+                '{"data":{"type":"parcel","attributes":{"parcel_id": 22222,"provider": "omniva"}}}',
+                ['http_code' => Response::HTTP_OK]
+            )
         ]);
 
         return $this->client;
