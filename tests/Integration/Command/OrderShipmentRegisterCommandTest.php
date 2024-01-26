@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Command;
 
 use App\Command\OrderShipmentRegisterCommand;
+use ReflectionMethod;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,8 +14,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class OrderShipmentRegisterCommandTest extends KernelTestCase
 {
-    private $command;
-    private $execute;
+    private OrderShipmentRegisterCommand $command;
+    private ReflectionMethod $execute;
 
     public function setUp(): void
     {

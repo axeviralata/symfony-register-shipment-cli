@@ -9,6 +9,7 @@ use App\Contracts\OrderShipmentDTOInterface;
 use App\Contracts\ShippingServiceInterface;
 use App\DTO\OMNIVAOrderShipment;
 use App\Enums\ShippingProvider;
+use App\Service\Serializer\DTOSerializer;
 use InvalidArgumentException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -20,10 +21,18 @@ class OMNIVAShippingService implements ShippingServiceInterface, MockedShippingS
 {
     const API_URL = 'https://omnivafake.com';
 
-    public function __construct(private HttpClientInterface $client)
+    public function __construct(private HttpClientInterface $client, private readonly DTOSerializer $serializer)
     {
     }
 
+    /**
+     * @param OrderShipmentDTOInterface $shipment
+     * @return ResponseInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
+     */
     public function register(OrderShipmentDTOInterface $shipment): ResponseInterface
     {
         if (!$shipment instanceof OMNIVAOrderShipment) {
@@ -67,6 +76,15 @@ class OMNIVAShippingService implements ShippingServiceInterface, MockedShippingS
         );
 
         return $response;
+    }
+
+    /**
+     * @param string $orderJson
+     * @return OMNIVAOrderShipment
+     */
+    public function createDTO(string $orderJson): OMNIVAOrderShipment
+    {
+        return $this->serializer->deserialize($orderJson, $this->getDTOClass(), 'json');
     }
 
     public function getName(): string

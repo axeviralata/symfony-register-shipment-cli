@@ -6,8 +6,8 @@ namespace App\Command;
 
 use App\Contracts\CLIInputValidatorInterface;
 use App\Enums\ShippingProvider;
-use App\Factory\ShippingServiceFactory;
 use App\Service\Shipment;
+use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,7 +23,6 @@ class OrderShipmentRegisterCommand extends Command
 {
     public function __construct(
         private readonly Shipment $shipmentService,
-        private readonly ShippingServiceFactory $shippingServiceFactory,
         private readonly CLIInputValidatorInterface $cliValidator,
         string $name = null
     ) {
@@ -68,9 +67,8 @@ class OrderShipmentRegisterCommand extends Command
         $shippingProvider = strtolower($input->getOption('shipping-provider'));
         $order = $input->getOption('order');
         try {
-            $shipmentServiceProvider = $this->shippingServiceFactory->create($shippingProvider);
-            $this->shipmentService->process($order, $shipmentServiceProvider);
-        } catch (\Exception $exception) {
+            $this->shipmentService->process($order, $shippingProvider);
+        } catch (Exception $exception) {
             $io->error($exception->getMessage());
             return Command::FAILURE;
         }

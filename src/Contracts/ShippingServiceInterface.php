@@ -14,4 +14,6 @@ interface ShippingServiceInterface
     public function supportsProvider(string $provider): bool;
 
     public function getDTOClass(): string;
+
+    public function createDTO(string $orderJson): OrderShipmentDTOInterface;
 }

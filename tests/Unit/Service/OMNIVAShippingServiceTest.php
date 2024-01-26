@@ -9,6 +9,7 @@ use App\DTO\OMNIVAOrderShipment;
 use App\DTO\UPSOrderShipment;
 use App\Enums\ShippingProvider;
 use App\Service\OMNIVAShippingService;
+use App\Service\Serializer\DTOSerializer;
 use ArgumentCountError;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -34,7 +35,8 @@ class OMNIVAShippingServiceTest extends TestCase
                 ['http_code' => Response::HTTP_OK]
             )
         ]);
-        $this->service = new OMNIVAShippingService($this->client);
+        $serializer = $this->createMock(DTOSerializer::class);
+        $this->service = new OMNIVAShippingService($this->client, $serializer);
     }
 
     /**
@@ -130,6 +132,21 @@ class OMNIVAShippingServiceTest extends TestCase
         $wrongDto = new UPSOrderShipment();
         $this->expectException(\InvalidArgumentException::class);
         $this->service->register($wrongDto);
+    }
+
+    /**
+     * @test
+     */
+    public function createDtoOmnivaPositive()
+    {
+        $serializer = $this->createMock(DTOSerializer::class);
+        $serializer->expects($this->once())
+            ->method('deserialize')
+            ->willReturn(new OMNIVAOrderShipment());
+        $service = new OMNIVAShippingService($this->client, $serializer);
+
+        $orderJson = '{"iam":"groot"}';
+        $service->createDTO($orderJson);
     }
 
 }

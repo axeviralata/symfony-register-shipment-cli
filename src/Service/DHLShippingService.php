@@ -9,9 +9,9 @@ use App\Contracts\OrderShipmentDTOInterface;
 use App\Contracts\ShippingServiceInterface;
 use App\DTO\DHLOrderShipment;
 use App\Enums\ShippingProvider;
+use App\Service\Serializer\DTOSerializer;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -21,7 +21,7 @@ class DHLShippingService implements ShippingServiceInterface, MockedShippingServ
 {
     const API_URL = 'https://dhlfake.com';
 
-    public function __construct(private HttpClientInterface $client, private SerializerInterface $serializer)
+    public function __construct(private HttpClientInterface $client, private DTOSerializer $serializer)
     {
     }
 
@@ -53,6 +53,15 @@ class DHLShippingService implements ShippingServiceInterface, MockedShippingServ
     }
 
     /**
+     * @param string $orderJson
+     * @return DHLOrderShipment
+     */
+    public function createDTO(string $orderJson): DHLOrderShipment
+    {
+        return $this->serializer->deserialize($orderJson, $this->getDTOClass(), 'json');
+    }
+
+    /**
      * Provider name
      * @return string
      */
@@ -67,7 +76,7 @@ class DHLShippingService implements ShippingServiceInterface, MockedShippingServ
      */
     public function supportsProvider(string $provider): bool
     {
-        return   $this->getName() === $provider;
+        return $this->getName() === $provider;
     }
 
     /**

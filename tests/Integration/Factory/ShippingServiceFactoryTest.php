@@ -13,7 +13,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class ShippingServiceFactoryTest extends KernelTestCase
 {
-    private $factory;
+    private ShippingServiceFactory $factory;
 
     public function setUP(): void
     {

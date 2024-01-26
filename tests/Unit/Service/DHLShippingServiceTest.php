@@ -9,7 +9,7 @@ use App\DTO\DHLOrderShipment;
 use App\DTO\UPSOrderShipment;
 use App\Enums\ShippingProvider;
 use App\Service\DHLShippingService;
-use App\Tests\Helpers\SerializerHelper;
+use App\Service\Serializer\DTOSerializer;
 use ArgumentCountError;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -31,9 +31,11 @@ class DHLShippingServiceTest extends TestCase
                 ['http_code' => Response::HTTP_OK]
             ),
         ]);
-        $serializer = $this->createMock(SerializerHelper::class);
+        $serializer = $this->createMock(DTOSerializer::class);
         $serializer->method('serialize')
             ->willReturn('{"iam":"json"}');
+        $serializer->method('deserialize')
+            ->willReturn(new DHLOrderShipment());
         $this->service = new DHLShippingService($this->client, $serializer);
     }
 
@@ -114,6 +116,21 @@ class DHLShippingServiceTest extends TestCase
         $wrongDto = new UPSOrderShipment();
         $this->expectException(\InvalidArgumentException::class);
         $this->service->register($wrongDto);
+    }
+
+    /**
+     * @test
+     */
+    public function createDtoDhlPositive()
+    {
+        $serializer = $this->createMock(DTOSerializer::class);
+        $serializer->expects($this->once())
+            ->method('deserialize')
+            ->willReturn(new DHLOrderShipment());
+        $service = new DHLShippingService($this->client, $serializer);
+
+        $orderJson = '{"iam":"groot"}';
+        $service->createDTO($orderJson);
     }
 
 }

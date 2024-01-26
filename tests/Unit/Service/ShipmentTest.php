@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
-use App\Contracts\OrderShipmentDTOInterface;
+use App\DTO\DHLOrderShipment;
+use App\Factory\ShippingServiceFactory;
 use App\Service\DHLShippingService;
 use App\Service\Shipment;
-use App\Tests\Helpers\SerializerHelper;
-use App\Validator\OrderShipmentDTOValidator;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -19,26 +18,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ShipmentTest extends TestCase
 {
-    private $serializer;
-    private $validator;
-
     public function setUP(): void
     {
-        $dto = $this->createMock(OrderShipmentDTOInterface::class);
-        $dto->expects($this->once())
-            ->method('getOrderId')
-            ->willReturn(777);
-
-        $this->serializer = $this->createMock(SerializerHelper::class);
-        $this->serializer->expects($this->once())
-            ->method('deserialize')
-            ->willReturn($dto);
-
-        $this->validator = $this->createMock(OrderShipmentDTOValidator::class);
-        $this->validator->expects($this->once())
-            ->method('validateDTO')
-            ->willReturnCallback(function () {
-            });
     }
 
     /**
@@ -50,15 +31,17 @@ class ShipmentTest extends TestCase
         $loggerMock->expects($this->exactly(2))
             ->method('info')
             ->withConsecutive(
-                ['Processing of shipment related to Order id = 777'],
+                ['Processing of Order Shipment', ['order_id' => 777]],
                 ['-- Shipment was successfully processed']
             );
-        $shipment = new Shipment($this->serializer, $this->validator, $loggerMock);
 
         $response = $this->createMock(ResponseInterface::class);
         $response->expects($this->once())
             ->method('getStatusCode')
             ->willReturn(Response::HTTP_OK);
+
+        $dto = new DHLOrderShipment();
+        $dto->setOrderId(777);
 
         $service = $this->createMock(DHLShippingService::class);
         $service->expects($this->once())
@@ -67,8 +50,17 @@ class ShipmentTest extends TestCase
         $service->expects($this->once())
             ->method('register')
             ->willReturn($response);
+        $service->expects($this->once())
+            ->method('createDTO')
+            ->willReturn($dto);
 
-        $shipment->process('{"iam":"groot"}', $service);
+        $factory = $this->createMock(ShippingServiceFactory::class);
+        $factory->expects($this->once())
+            ->method('create')
+            ->willReturn($service);
+
+        $shipment = new Shipment($factory, $loggerMock);
+        $shipment->process('{"iam":"groot"}', 'dhl');
     }
 
     /**
@@ -79,16 +71,18 @@ class ShipmentTest extends TestCase
         $loggerMock = $this->createMock(LoggerInterface::class);
         $loggerMock->expects($this->once())
             ->method('info')
-            ->with('Processing of shipment related to Order id = 777');
+            ->with('Processing of Order Shipment', ['order_id' => 777]);
         $loggerMock->expects($this->once())
             ->method('error')
-            ->with('-- Registration endpoint returned status code: 400');
-        $shipment = new Shipment($this->serializer, $this->validator, $loggerMock);
+            ->with('-- Registration endpoint returned not acceptable status code.', ['response_status_code' => 400]);
 
         $response = $this->createMock(ResponseInterface::class);
         $response->expects($this->once())
             ->method('getStatusCode')
             ->willReturn(Response::HTTP_BAD_REQUEST);
+
+        $dto = new DHLOrderShipment();
+        $dto->setOrderId(777);
 
         $service = $this->createMock(DHLShippingService::class);
         $service->expects($this->once())
@@ -97,8 +91,17 @@ class ShipmentTest extends TestCase
         $service->expects($this->once())
             ->method('register')
             ->willReturn($response);
+        $service->expects($this->once())
+            ->method('createDTO')
+            ->willReturn($dto);
 
-        $shipment->process('{"iam":"groot"}', $service);
+        $factory = $this->createMock(ShippingServiceFactory::class);
+        $factory->expects($this->once())
+            ->method('create')
+            ->willReturn($service);
+
+        $shipment = new Shipment($factory, $loggerMock);
+        $shipment->process('{"iam":"groot"}', 'dhl');
     }
 
     /**
@@ -109,9 +112,13 @@ class ShipmentTest extends TestCase
         $loggerMock = $this->createMock(LoggerInterface::class);
         $loggerMock->expects($this->once())
             ->method('info')
-            ->with('Processing of shipment related to Order id = 777');
+            ->with('Processing of Order Shipment', ['order_id' => 777]);
+        $loggerMock->expects($this->once())
+            ->method('error')
+            ->with('Exception thrown during shipment register', ['error' => 'Ops!']);
 
-        $shipment = new Shipment($this->serializer, $this->validator, $loggerMock);
+        $dto = new DHLOrderShipment();
+        $dto->setOrderId(777);
 
         $service = $this->createMock(DHLShippingService::class);
         $service->expects($this->once())
@@ -122,7 +129,17 @@ class ShipmentTest extends TestCase
             ->willReturnCallback(function () {
                 throw new \Exception('Ops!');
             });
+        $service->expects($this->once())
+            ->method('createDTO')
+            ->willReturn($dto);
+
+        $factory = $this->createMock(ShippingServiceFactory::class);
+        $factory->expects($this->once())
+            ->method('create')
+            ->willReturn($service);
+
+        $shipment = new Shipment($factory, $loggerMock);
         $this->expectException(\Exception::class);
-        $shipment->process('{"iam":"groot"}', $service);
+        $shipment->process('{"iam":"groot"}', 'dhl');
     }
 }
